@@ -8,6 +8,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlalchemy.exc import SQLAlchemyError
 
+from assistant import router as assistant_router
+from assistant.context import router as assistant_context_router
 from audio import router as audio_router
 from auth.router import get_current_user
 from auth.router import router as auth_router
@@ -59,9 +61,14 @@ if _cors_origins:
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
+        # Let the browser read the assistant's stream marker cross-origin; the AI-SDK
+        # useChat transport reads it to recognise the UI message stream.
+        expose_headers=["x-vercel-ai-ui-message-stream"],
     )
 
 app.include_router(auth_router)
+app.include_router(assistant_router, dependencies=[Depends(get_current_user)])
+app.include_router(assistant_context_router, dependencies=[Depends(get_current_user)])
 app.include_router(audio_router, dependencies=[Depends(get_current_user)])
 app.include_router(calendar_router, dependencies=[Depends(get_current_user)])
 app.include_router(patients_router, dependencies=[Depends(get_current_user)])
